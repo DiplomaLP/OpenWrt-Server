@@ -1,8 +1,5 @@
-//
-// Created by yura on 17.03.18.
-//
+#pragma once
 
-#ifndef OPENWRT_SERVER_SERVER_H
-#define OPENWRT_SERVER_SERVER_H
+int server_start();
 
-#endif //OPENWRT_SERVER_SERVER_H
+int server_stop();
