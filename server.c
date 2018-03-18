@@ -63,9 +63,72 @@ int server_create(uint16_t port, struct server **server_out)
     return 0;
 }
 
+static int server_subscriber_parse(struct server *self, const char*message) {
+
+    char message_copy[BUFFER_SIZE];
+    memset(message_copy, 0, BUFFER_SIZE);
+
+    strncpy(message_copy, message, BUFFER_SIZE);
+    message_copy[BUFFER_SIZE-1] = '\0';
+
+    char *find_term = strchr(message_copy, ':');
+
+    if (find_term == NULL) {
+        fprintf(stderr, "didn't find the \':\' in the message: %s \n", message_copy);
+        return -1;
+    }
+
+    find_term[0] = '\0';
+
+    for (int i = 0; i < self->subscribers_count; i++) {
+        if (strncmp(message_copy, self->subscribers[i].command, COMMAND_SIZE) == 0) {
+            int ret = self->subscribers[i].handler(message, strnlen(message, BUFFER_SIZE));
+            if (ret != 0) {
+                fprintf(stderr, "subscriber_handler failedd, ret = %d subscriber: %s, message = %s \n",
+                        ret,
+                        self->subscribers[i].command,
+                        message);
+            }
+
+            return ret;
+        }
+    }
+
+    fprintf(stderr, "the message handler didn't matched, message = %s \n", message);
+
+    return -1;
+}
+
 int server_start(struct server *self)
 {
+    socklen_t addr_len;
+    struct sockaddr_in client;
+    memset(&client, 0, sizeof(client));
 
+    int client_sock = accept(self->socket, (struct sockaddr *)&client, &addr_len);
+    if (client_sock == -1) {
+        fprintf(stderr, "accept(self->socket = %d, ...)failed, ret = %d, errno = %d \n", self->socket, client_sock, errno);
+        return -errno;
+    }
+
+    self->client_fd = client_sock;
+
+    fprintf(stderr, " --- connection accepted client socket = %d \n", client_sock);
+
+    while(true) {
+        int ret = recv(self->client_fd, self->buf, BUFFER_SIZE, 0);
+        if (ret == -1) {
+            break;
+        }
+        ret = server_subscriber_parse(self, self->buf);
+        if (ret != 0)
+            break;
+    }
+
+    const char* connection_closed = "connection closed";
+    send(self->client_fd, connection_closed, strlen(connection_closed), 0);
+
+    close(client_sock);
 }
 
 int server_add_subscriber(struct server *self, struct server_subscriber* subscriber)
@@ -85,6 +148,10 @@ int server_stop(struct server *self)
 
 int server_destroy(struct server *self)
 {
+    if (self->client_fd) {
+        close(self->client_fd);
+    }
+
     close(self->socket);
 
     free(self);

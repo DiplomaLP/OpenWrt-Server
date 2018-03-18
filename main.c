@@ -1,8 +1,10 @@
 #include "server.h"
 #include <stdio.h>
+#include <memory.h>
 
 int main(int argc , char *argv[])
 {
+
     struct server *server;
 
     int ret = server_create(5000, &server);

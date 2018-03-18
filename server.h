@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define BUFFER_SIZE (256)
+#define BUFFER_SIZE (256L)
 
 #define COMMAND_SIZE (128)
 
@@ -13,7 +13,7 @@
 struct server_subscriber {
     char command[COMMAND_SIZE];
 
-    void (*handler)(const char *buffer, size_t buffer_len);
+    int (*handler)(const char *buffer, size_t buffer_len);
 };
 
 struct server {
