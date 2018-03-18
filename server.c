@@ -74,8 +74,12 @@ static int server_subscriber_parse(struct server *self, const char*message) {
     char *find_term = strchr(message_copy, ':');
 
     if (find_term == NULL) {
-        fprintf(stderr, "didn't find the \':\' in the message: %s \n", message_copy);
-        return -1;
+        find_term = strchr(message_copy, ';');
+
+        if (find_term == NULL) {
+            fprintf(stderr, "didn't find the \':\' in the message: %s \n", message_copy);
+            return -1;
+        }
     }
 
     find_term[0] = '\0';
@@ -94,7 +98,7 @@ static int server_subscriber_parse(struct server *self, const char*message) {
         }
     }
 
-    fprintf(stderr, "the message handler didn't matched, message = %s \n", message);
+    fprintf(stderr, "the message handler didn't match, message = %s \n", message);
 
     return -1;
 }
@@ -111,22 +115,22 @@ int server_start(struct server *self)
         return -errno;
     }
 
-    self->client_fd = client_sock;
-
     fprintf(stderr, " --- connection accepted client socket = %d \n", client_sock);
 
     while(true) {
-        int ret = recv(self->client_fd, self->buf, BUFFER_SIZE, 0);
+        int ret = recv(client_sock, self->buf, BUFFER_SIZE, 0);
         if (ret == -1) {
             break;
         }
+        self->buf[ret] = '\0';
+
         ret = server_subscriber_parse(self, self->buf);
         if (ret != 0)
             break;
     }
 
     const char* connection_closed = "connection closed";
-    send(self->client_fd, connection_closed, strlen(connection_closed), 0);
+    send(client_sock, connection_closed, strlen(connection_closed), 0);
 
     close(client_sock);
 }
@@ -141,17 +145,9 @@ int server_add_subscriber(struct server *self, struct server_subscriber* subscri
     return -ENOSPC;
 }
 
-int server_stop(struct server *self)
-{
-    return 0;
-}
 
 int server_destroy(struct server *self)
 {
-    if (self->client_fd) {
-        close(self->client_fd);
-    }
-
     close(self->socket);
 
     free(self);

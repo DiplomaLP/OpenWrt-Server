@@ -19,8 +19,6 @@ struct server_subscriber {
 struct server {
     int socket;
 
-    int client_fd;
-
     char buf[BUFFER_SIZE];
 
     uint32_t subscribers_count;
