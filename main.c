@@ -1,25 +1,30 @@
 #include "server.h"
 #include <stdio.h>
 #include <memory.h>
+#include <stdlib.h>
 
-int test1_handler(const char *buffer, size_t buffer_len) {
+int move_left_handler(const char *buffer, size_t buffer_len) {
     fprintf(stderr, " --- in handler, buffer = %s, buffer_len = %d \n", buffer, buffer_len);
+
+    system("echo \"1\" > /dev/ttyATH0");
 
     return 0;
 }
 
-int test2_handler(const char *buffer, size_t buffer_len) {
+int move_right_handler(const char *buffer, size_t buffer_len) {
     fprintf(stderr, " --- in handler, buffer = %s, buffer_len = %d \n", buffer, buffer_len);
 
-    return -1;
+    system("echo \"0\" > /dev/ttyATH0");
+
+    return 0;
 }
 
 int main(int argc , char *argv[])
 {
     struct server *server;
 
-    struct server_subscriber subscriber_test1 = {.command = "test1", .handler = test1_handler};
-    struct server_subscriber subscriber_test2 = {.command = "test2", .handler = test2_handler};
+    struct server_subscriber subscriber_test1 = {.command = "MOVE_LEFT", .handler = move_left_handler};
+    struct server_subscriber subscriber_test2 = {.command = "MOVE_RIGHT", .handler = move_right_handler};
 
     int ret = server_create(12345, &server);
     if (ret != 0) {

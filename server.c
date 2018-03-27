@@ -77,7 +77,7 @@ static int server_subscriber_parse(struct server *self, const char*message) {
         find_term = strchr(message_copy, ';');
 
         if (find_term == NULL) {
-            fprintf(stderr, "didn't find the \':\' in the message: %s \n", message_copy);
+            fprintf(stderr, "didn't find the \';\' in the message: %s \n", message_copy);
             return -1;
         }
     }
@@ -126,7 +126,7 @@ int server_start(struct server *self)
 
         ret = server_subscriber_parse(self, self->buf);
         if (ret != 0)
-            break;
+            continue;
     }
 
     const char* connection_closed = "connection closed";
