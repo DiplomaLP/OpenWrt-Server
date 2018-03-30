@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+__BEGIN_DECLS
+
 #define BUFFER_SIZE (256L)
 
 #define COMMAND_SIZE (128)
@@ -33,3 +35,5 @@ int server_add_subscriber(struct server *self, struct server_subscriber* subscri
 int server_start(struct server *self);
 
 int server_destroy(struct server *self);
+
+__END_DECLS
