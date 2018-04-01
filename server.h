@@ -6,6 +6,14 @@
 
 __BEGIN_DECLS
 
+#define ALREADY_CONNECTED "ALREADY_CONNECTED"
+
+#define CONNECTION_CLOSED "CONNECTION_CLOSED"
+
+#define CONNECTED_SUCCESSFULLY "CONNECTED_SUCCESSFULLY"
+
+#define COMMAND_CLOSE_CONNECTION "COMMAND_CLOSE_CONNECTION"
+
 #define BUFFER_SIZE (256L)
 
 #define COMMAND_SIZE (128)
@@ -30,7 +38,7 @@ struct server {
 
 int server_create(uint16_t port, struct server **server_out);
 
-int server_add_subscriber(struct server *self, struct server_subscriber* subscriber);
+int server_add_subscriber(struct server *self, const struct server_subscriber *subscriber);
 
 int server_start(struct server *self);
 

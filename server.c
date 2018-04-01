@@ -40,6 +40,7 @@ int server_create(uint16_t port, struct server **server_out)
 
     ret = bind(server->socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
     if (ret < 0) {
+        perror("bind");
         fprintf(stderr, "bind(socket = %d, ...), return = %d, errno = %d\n", server->socket, ret, errno);
         close(server->socket);
         free(server);
@@ -103,8 +104,81 @@ static int server_subscriber_parse(struct server *self, const char*message) {
     return -1;
 }
 
+static int get_data(struct server *self, int client_socket) {
+    fd_set rd_set;
+    FD_ZERO(&rd_set);
+    FD_SET(self->socket, &rd_set);
+    FD_SET(client_socket, &rd_set);
+
+    int nfd = MAX(self->socket, client_socket) + 1;
+
+    int ret = select(nfd, &rd_set, NULL, NULL, NULL);
+    switch (ret) {
+        case 0:
+            fprintf(stderr, "timeout");
+            break;
+        case -1:
+            perror("select");
+            return -errno;
+        default:
+            break;
+    }
+
+    if (FD_ISSET(self->socket, &rd_set)) {
+        struct sockaddr_in client;
+        memset(&client, 0, sizeof(client));
+        socklen_t addr_len;
+
+        fprintf(stderr, "try to connect already connected! \n");
+        int client_socket2 = accept(self->socket, (struct sockaddr *)&client, &addr_len);
+        if (client_socket2 == -1) {
+            fprintf(stderr, "new connect accept(self->socket = %d, ...)failed, ret = %d, errno = %d \n",
+                    self->socket,
+                    client_socket2,
+                    errno);
+
+            return -errno;
+        }
+        fprintf(stderr, "sending already connected \n");
+
+        ssize_t send_ret = send(client_socket2, ALREADY_CONNECTED, strlen(ALREADY_CONNECTED),0);
+        if (send_ret == -1) {
+            fprintf(stderr, "send(ALREADY_CONNECTED failure. error = %d ) \n", errno);
+        }else if (send_ret != strlen(CONNECTION_CLOSED)) {
+            fprintf(stderr, "send(ALREADY_CONNECTED return = %d) \n", send_ret);
+        }
+
+        shutdown(client_socket2, SHUT_RDWR);
+
+        close(client_socket2);
+    }
+
+    if (FD_ISSET(client_socket, &rd_set)) {
+        ssize_t ret_recv = recv(client_socket, self->buf, BUFFER_SIZE, 0);
+        if (ret_recv == -1) {
+            fprintf(stderr, "recv(client_sock = %d, ) failed, ret = %d, errno = %d\n", client_socket, ret_recv, errno);
+            return -errno;
+        }
+        self->buf[ret_recv] = '\0';
+        return (int)ret_recv;
+    }
+
+    return 0;
+}
+
+static int command_close_connection(const char *buffer, size_t buffer_len) {
+    fprintf(stderr, "received connection close, buffer = %s\n", buffer);
+    return -ECANCELED;
+}
+
 int server_start(struct server *self)
 {
+    struct server_subscriber subscriber = {.handler = command_close_connection};
+    strcpy(subscriber.command, COMMAND_CLOSE_CONNECTION);
+
+    server_add_subscriber(self, &subscriber);
+
+    ssize_t ret;
     socklen_t addr_len;
     struct sockaddr_in client;
     memset(&client, 0, sizeof(client));
@@ -117,25 +191,58 @@ int server_start(struct server *self)
 
     fprintf(stderr, " --- connection accepted client socket = %d \n", client_sock);
 
-    while(true) {
-        int ret = recv(client_sock, self->buf, BUFFER_SIZE, 0);
-        if (ret == -1) {
-            break;
-        }
-        self->buf[ret] = '\0';
-
-        ret = server_subscriber_parse(self, self->buf);
-        if (ret != 0)
-            continue;
+    ret = send(client_sock, CONNECTED_SUCCESSFULLY, strlen(CONNECTED_SUCCESSFULLY), 0);
+    if (ret == -1) {
+        fprintf(stderr, "send(CONNECTED_SUCCESSFULLY failure. error = %d \n)", errno);
+        goto connection_close;
+    }else if (ret != strlen(CONNECTED_SUCCESSFULLY)) {
+        fprintf(stderr, "send(CONNECTED_SUCCESSFULLY return = %d\n)", ret);
+        goto connection_close;
     }
 
-    const char* connection_closed = "connection closed";
-    send(client_sock, connection_closed, strlen(connection_closed), 0);
+    const uint32_t try_parse = 20;
+    uint32_t count_of_parse_error = 0;
 
+    while(true) {
+        ret = get_data(self, client_sock);
+        if (ret < 0) {
+            break;
+        }
+        if (ret == 0) {
+            continue;
+        }
+
+        ret = server_subscriber_parse(self, self->buf);
+        if (ret == -ECANCELED) {
+            fprintf(stderr, "received connection closed! \n");
+            break;
+        }
+        if (ret != 0) {
+            if (++count_of_parse_error > try_parse) {
+                break;
+            }
+        } else {
+            count_of_parse_error = 0;
+        }
+    }
+
+connection_close:
+
+    fprintf(stderr, "sending close connection\n");
+    ret = send(client_sock, CONNECTION_CLOSED, strlen(CONNECTION_CLOSED), 0);
+    if (ret == -1) {
+        fprintf(stderr, "send(connection_closed failure. error = %d \n)", errno);
+    }else if (ret != strlen(CONNECTION_CLOSED)) {
+        fprintf(stderr, "send(connection_closed return = %d\n)", ret);
+    }
+
+    shutdown(client_sock, SHUT_RDWR);
     close(client_sock);
+
+    return 0;
 }
 
-int server_add_subscriber(struct server *self, struct server_subscriber* subscriber)
+int server_add_subscriber(struct server *self, const struct server_subscriber *subscriber)
 {
     if (self->subscribers_count < SERVER_SUBSCRIBER_COUNT) {
         self->subscribers[self->subscribers_count++] = *subscriber;
@@ -148,7 +255,7 @@ int server_add_subscriber(struct server *self, struct server_subscriber* subscri
 
 int server_destroy(struct server *self)
 {
-    close(self->socket);
+   close(self->socket);
 
     free(self);
 

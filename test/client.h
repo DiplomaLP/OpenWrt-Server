@@ -8,6 +8,7 @@ using namespace std;
 class Client
 {
     int fdSocket;
+    char recvBuff[1024];
 
 public:
     Client();
