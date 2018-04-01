@@ -6,7 +6,7 @@ STAGING_DIR=~/open_wrt/openwrt/staging_dir/toolchain-mips_24kc_gcc-5.5.0_musl
 
 PATH=$PATH:$STAGING_DIR/bin
 
-$STAGING_DIR/bin/mips-openwrt-linux-gcc ../../main.c ../../server.c -o server -static
+$STAGING_DIR/bin/mips-openwrt-linux-gcc ../../main.c ../../server.c ../../server_subscribers.c -o server -static
 
 ret_code=$?
 if [ $ret_code != 0 ]; then

@@ -21,9 +21,11 @@ __BEGIN_DECLS
 #define SERVER_SUBSCRIBER_COUNT (10)
 
 struct server_subscriber {
-    char command[COMMAND_SIZE];
+    const char *command;
 
-    int (*handler)(const char *buffer, size_t buffer_len);
+    const void *user_data;
+
+    int (*handler)(const char *buffer, size_t buffer_len, const void *user_data);
 };
 
 struct server {

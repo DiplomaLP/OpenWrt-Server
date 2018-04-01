@@ -87,7 +87,8 @@ static int server_subscriber_parse(struct server *self, const char*message) {
 
     for (int i = 0; i < self->subscribers_count; i++) {
         if (strncmp(message_copy, self->subscribers[i].command, COMMAND_SIZE) == 0) {
-            int ret = self->subscribers[i].handler(message, strnlen(message, BUFFER_SIZE));
+            struct server_subscriber* subscriber = &self->subscribers[i];
+            int ret = subscriber->handler(message, strnlen(message, BUFFER_SIZE), subscriber->user_data);
             if (ret != 0) {
                 fprintf(stderr, "subscriber_handler failedd, ret = %d subscriber: %s, message = %s \n",
                         ret,
@@ -166,15 +167,16 @@ static int get_data(struct server *self, int client_socket) {
     return 0;
 }
 
-static int command_close_connection(const char *buffer, size_t buffer_len) {
+static int command_close_connection(const char *buffer, size_t buffer_len, const void *user_data) {
     fprintf(stderr, "received connection close, buffer = %s\n", buffer);
     return -ECANCELED;
 }
 
 int server_start(struct server *self)
 {
-    struct server_subscriber subscriber = {.handler = command_close_connection};
-    strcpy(subscriber.command, COMMAND_CLOSE_CONNECTION);
+    struct server_subscriber subscriber = {
+            .handler = command_close_connection,
+            .command = COMMAND_CLOSE_CONNECTION};
 
     server_add_subscriber(self, &subscriber);
 
