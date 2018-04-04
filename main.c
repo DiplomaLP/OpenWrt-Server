@@ -1,7 +1,8 @@
+#include <zconf.h>
 #include "server.h"
 #include "server_subscribers.h"
 
-int main(int argc , char *argv[])
+int server_job()
 {
     struct server *server;
 
@@ -30,4 +31,16 @@ int main(int argc , char *argv[])
     server_destroy(server);
 
     return 0;
+}
+
+
+int main(int argc , char *argv[])
+{
+    while(1) {
+        fprintf(stderr, "--- Start server!!! --- \n\n");
+        server_job();
+        fprintf(stderr, "--- Server restart, sleep(1) \n\n");
+        sleep(1);
+
+    }
 }
