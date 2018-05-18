@@ -59,21 +59,10 @@ static int light_turn_on_off_handler(const char *buffer, size_t buffer_len, cons
 
     const struct server_subscriber_ctx *subscriber_ctx = (const struct server_subscriber_ctx*)user_data;
 
-    char *parser = strstr(buffer, ":");
-    char value = parser[1];
-
-    const char* data_to_send;
-
-    if (value == '0') {
-        data_to_send = "0 light turn off";
-    } else if (value == '1') {
-        data_to_send = "1 light turn on";
-    }
-
-    ssize_t size = write(subscriber_ctx->tty_fd, data_to_send, strlen(data_to_send));
+    ssize_t size = write(subscriber_ctx->tty_fd, buffer, buffer_len);
     if (size == -1) {
         perror("right_handler, write(tty_fd, \"0\") failed");
-    } else if (size != strlen(data_to_send)) {
+    } else if (size != buffer_len) {
         fprintf(stderr, "right_handler, write(tty_fd, \"0\") failed, ret = %d\n", size);
     }
 
