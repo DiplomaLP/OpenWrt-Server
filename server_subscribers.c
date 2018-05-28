@@ -90,19 +90,19 @@ void server_subscribers_get(const struct server_subscriber_ctx *ctx,
     static struct server_subscriber subscribers[SUBSCRIBERS_LEN];
 
     subscribers[0].user_data = ctx;
-    subscribers[0].command = "MOVE_LEFT";
+    subscribers[0].command = "ML";
     subscribers[0].handler = move_left_handler;
 
     subscribers[1].user_data = ctx;
-    subscribers[1].command = "MOVE_RIGHT";
+    subscribers[1].command = "MR";
     subscribers[1].handler = move_right_handler;
 
     subscribers[2].user_data = ctx;
-    subscribers[2].command = "MOVE_CAMERA";
+    subscribers[2].command = "MC";
     subscribers[2].handler = move_camera_handler;
 
     subscribers[3].user_data = ctx;
-    subscribers[3].command = "LIGHT_TURN";
+    subscribers[3].command = "LT";
     subscribers[3].handler = light_turn_on_off_handler;
 
     *subscribers_len_out = SUBSCRIBERS_LEN;
